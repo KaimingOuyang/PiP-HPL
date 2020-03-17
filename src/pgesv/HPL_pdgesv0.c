@@ -49,6 +49,9 @@
  */
 #include "hpl.h"
 
+double comm_time;
+double dgemm_time;
+
 #ifdef STDC_HEADERS
 void HPL_pdgesv0
 (
@@ -123,6 +126,9 @@ void HPL_pdgesv0
 /*
  * Loop over the columns of A
  */
+   comm_time = 0.0;
+   dgemm_time = 0.0;
+   int iter = 0;
    for( j = 0; j < N; j += nb )
    {
       n = N - j; jb = Mmin( n, nb );
@@ -143,13 +149,30 @@ void HPL_pdgesv0
 /*
  * Factor and broadcast current panel - update
  */
+      
       HPL_pdfact(               panel[0] );
+      MPI_Barrier(MPI_COMM_WORLD);
+      comm_time -= MPI_Wtime();
       (void) HPL_binit(         panel[0] );
       do
       { (void) HPL_bcast(       panel[0], &test ); }
       while( test != HPL_SUCCESS );
       (void) HPL_bwait(         panel[0] );
+      comm_time += MPI_Wtime();
+
       HPL_pdupdate( NULL, NULL, panel[0], -1 );
+
+      
+      double max_comm_time;
+      double max_dgemm_time;
+      MPI_Reduce(&comm_time, &max_comm_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      MPI_Reduce(&dgemm_time, &max_dgemm_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      if (GRID->myrow == 0 && GRID->mycol == 0){
+         printf("Iteration %d - comm_time %.3lf, dgemm_time %.3lf\n", iter++, max_comm_time, max_dgemm_time);
+         fflush(stdout);
+      }
+      comm_time = 0.0;
+      dgemm_time = 0.0;
 /*
  * Update message id for next factorization
  */

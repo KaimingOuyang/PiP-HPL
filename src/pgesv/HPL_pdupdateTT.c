@@ -357,6 +357,7 @@ void HPL_pdupdateTT
 /*
  * The panel has been forwarded at that point, finish the update
  */
+      extern double dgemm_time;
       if( ( nn = n - nq0 ) > 0 )
       {
          HPL_dtrsm( HplColumnMajor, HplRight, HplUpper, HplNoTrans,
@@ -379,9 +380,11 @@ void HPL_pdupdateTT
             (void) vsip_mdestroy_d( Av1 );
             (void) vsip_mdestroy_d( Uv1 );
 #else
+            dgemm_time -= MPI_Wtime();
             HPL_dgemm( HplColumnMajor, HplNoTrans, HplTrans, mp, nn,
                        jb, -HPL_rone, L2ptr, ldl2, Uptr, LDU, HPL_rone,
                        Mptr( Aptr, jb, 0, lda ), lda );
+            dgemm_time += MPI_Wtime();
 #endif
             HPL_dlatcpy( jb, nn, Uptr, LDU, Aptr, lda );
          }
@@ -402,9 +405,11 @@ void HPL_pdupdateTT
             (void) vsip_mdestroy_d( Av1 );
             (void) vsip_mdestroy_d( Uv1 );
 #else
+            dgemm_time -= MPI_Wtime();
             HPL_dgemm( HplColumnMajor, HplNoTrans, HplTrans, mp, nn,
                        jb, -HPL_rone, L2ptr, ldl2, Uptr, LDU, HPL_rone,
                        Aptr, lda );
+            dgemm_time += MPI_Wtime();
 #endif
          }
       }
